@@ -12,30 +12,35 @@ def download():
     if not query:
         return jsonify({"status": "error", "message": "No query"}), 400
 
-    try:
-        # Step 1: Search for the video ID using an open API
-        search_url = f"https://vid.puffyan.us/api/v1/search?q={query}"
-        search_res = requests.get(search_url, timeout=15).json()
-        
-        if not search_res:
-            return jsonify({"status": "error", "message": "Song not found"}), 404
+    # List of reliable Search APIs
+    apis = [
+        f"https://itunes.apple.com/search?term={query}&limit=1&entity=song",
+        f"https://api.deezer.com/search?q={query}&limit=1"
+    ]
+
+    for url in apis:
+        try:
+            response = requests.get(url, timeout=5)
+            data = response.json()
             
-        video_id = search_res[0]['videoId']
-        title = search_res[0]['title']
+            # iTunes format check
+            if "results" in data and len(data["results"]) > 0:
+                track = data["results"][0]
+                return jsonify({
+                    "status": "success",
+                    "link": track["previewUrl"],
+                    "title": f"{track['trackName']} - {track['artistName']}"
+                })
+            
+            # Deezer format check
+            if "data" in data and len(data["data"]) > 0:
+                track = data["data"][0]
+                return jsonify({
+                    "status": "success",
+                    "link": track["preview"],
+                    "title": f"{track['title']} - {track['artist']['name']}"
+                })
+        except:
+            continue
 
-        # Step 2: Get the direct audio link (Full Song)
-        # Hum Invidious ki public API use kar rahe hain jo block nahi hoti
-        stream_url = f"https://vid.puffyan.us/api/v1/videos/{video_id}"
-        video_data = requests.get(stream_url, timeout=15).json()
-        
-        # Sab se behtareen audio format nikalna
-        audio_url = video_data['adaptiveFormats'][0]['url']
-
-        return jsonify({
-            "status": "success",
-            "link": audio_url,
-            "title": title
-        })
-                
-    except Exception as e:
-        return jsonify({"status": "error", "message": "High Traffic. Please try again in a moment."}), 500
+    return jsonify({"status": "error", "message": "All servers are busy. Please try a different song name."}), 500
