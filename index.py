@@ -12,35 +12,36 @@ def download():
     if not query:
         return jsonify({"status": "error", "message": "No query"}), 400
 
-    # List of reliable Search APIs
-    apis = [
-        f"https://itunes.apple.com/search?term={query}&limit=1&entity=song",
-        f"https://api.deezer.com/search?q={query}&limit=1"
+    # Invidious Instances jo Full Song allow karti hain
+    instances = [
+        "https://inv.tux.sh",
+        "https://invidious.sethforprivacy.com",
+        "https://vid.puffyan.us"
     ]
 
-    for url in apis:
+    for base in instances:
         try:
-            response = requests.get(url, timeout=5)
-            data = response.json()
+            # Step 1: Search Video ID
+            search_url = f"{base}/api/v1/search?q={query}"
+            search_res = requests.get(search_url, timeout=5).json()
+            if not search_res: continue
             
-            # iTunes format check
-            if "results" in data and len(data["results"]) > 0:
-                track = data["results"][0]
-                return jsonify({
-                    "status": "success",
-                    "link": track["previewUrl"],
-                    "title": f"{track['trackName']} - {track['artistName']}"
-                })
+            video_id = search_res[0]['videoId']
+            title = search_res[0]['title']
+
+            # Step 2: Get Audio Link (Full Song)
+            video_url = f"{base}/api/v1/videos/{video_id}"
+            video_data = requests.get(video_url, timeout=5).json()
             
-            # Deezer format check
-            if "data" in data and len(data["data"]) > 0:
-                track = data["data"][0]
-                return jsonify({
-                    "status": "success",
-                    "link": track["preview"],
-                    "title": f"{track['title']} - {track['artist']['name']}"
-                })
+            # Sub se behtareen audio link nikalna
+            audio_link = video_data['adaptiveFormats'][0]['url']
+            
+            return jsonify({
+                "status": "success",
+                "link": audio_link,
+                "title": title
+            })
         except:
             continue
 
-    return jsonify({"status": "error", "message": "All servers are busy. Please try a different song name."}), 500
+    return jsonify({"status": "error", "message": "Servers busy. Try again after 1 minute."}), 500
