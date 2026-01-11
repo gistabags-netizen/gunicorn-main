@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import requests
+import yt_dlp
 
 app = Flask(__name__)
 CORS(app)
@@ -13,20 +13,31 @@ def download():
         return jsonify({"error": "No query provided"}), 400
 
     try:
-        # Alternative Search API (Fast and No-Block)
-        search_url = f"https://api.deezer.com/search?q={query}&limit=1"
-        response = requests.get(search_url)
-        data = response.json()
-
-        if data['data']:
-            track = data['data'][0]
+        # Spotify link ho ya song name, ye dhoond lega
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'noplaylist': True,
+            'quiet': True,
+            'default_search': 'ytsearch',
+            'source_address': '0.0.0.0'
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Agar Spotify playlist link hai toh ye uski search karega
+            info = ydl.extract_info(query, download=False)
+            
+            if 'entries' in info:
+                # Playlist ki surat mein pehla gaana
+                video = info['entries'][0]
+            else:
+                # Single song ki surat mein
+                video = info
+                
             return jsonify({
                 "status": "success",
-                "link": track['preview'], # Fast preview link
-                "title": track['title'] + " - " + track['artist']['name']
+                "link": video['url'],
+                "title": video.get('title', 'Unknown Title')
             })
-        else:
-            return jsonify({"status": "error", "message": "Song not found"}), 404
-                
+            
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Link processing error"}), 500
