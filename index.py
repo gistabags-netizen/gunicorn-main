@@ -13,7 +13,8 @@ def download():
         return jsonify({"status": "error", "message": "No query provided"}), 400
 
     try:
-        # Search using iTunes/Deezer API (In par koi block nahi hota)
+        # iTunes API use kar rahe hain kyunki ye kabhi block nahi hoti
+        # Ye Spotify aur YouTube dono ke gaane search kar leta hai
         search_url = f"https://itunes.apple.com/search?term={query}&limit=1&entity=song"
         response = requests.get(search_url, timeout=10)
         data = response.json()
@@ -22,11 +23,11 @@ def download():
             track = data['results'][0]
             return jsonify({
                 "status": "success",
-                "link": track['previewUrl'],  # Direct MP3 Link
+                "link": track['previewUrl'], # Direct MP3 Link
                 "title": f"{track['trackName']} - {track['artistName']}"
             })
         
-        return jsonify({"status": "error", "message": "Song not found on global servers"}), 404
+        return jsonify({"status": "error", "message": "Song not found on servers"}), 404
                 
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": "Server Busy, try again"}), 500
