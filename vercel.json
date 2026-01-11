@@ -1,5 +1,15 @@
 {
+  "version": 2,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/main.py" }
+    { "source": "/(.*)", "destination": "index.py" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS" }
+      ]
+    }
   ]
 }
