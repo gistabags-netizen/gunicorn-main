@@ -10,19 +10,19 @@ CORS(app)
 def download():
     query = request.args.get('text')
     if not query:
-        return jsonify({"error": "No query provided"}), 400
+        return jsonify({"status": "error", "message": "No query provided"}), 400
 
     try:
-        # Step 1: Search using Deezer API (Very stable for Spotify/Normal searches)
+        # Search using Deezer API (Very stable for MP3 previews and Spotify searches)
         search_url = f"https://api.deezer.com/search?q={query}&limit=1"
-        response = requests.get(search_url)
+        response = requests.get(search_url, timeout=10)
         data = response.json()
 
-        if data.get('data'):
+        if data.get('data') and len(data['data']) > 0:
             track = data['data'][0]
             return jsonify({
                 "status": "success",
-                "link": track['preview'],  # Direct MP3 Link
+                "link": track['preview'],  # Direct high-quality MP3 preview link
                 "title": f"{track['title']} - {track['artist']['name']}"
             })
         
