@@ -6,35 +6,43 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
+# Aapki provide ki hui Key
+API_KEY = "7a6dd477d7msh7b16b4a874cde7cp1b56e0jsn8d43347e807a"
+
 @app.route('/download', methods=['GET'])
 def download():
     query = request.args.get('text')
     if not query:
         return jsonify({"status": "error", "message": "No query"}), 400
 
+    # RapidAPI YouTube DL Endpoint
+    url = "https://youtube-mp36.p.rapidapi.com/dl"
+    
+    # Agar user poora link daalta hai toh ID nikalna
+    video_id = query
+    if "v=" in query:
+        video_id = query.split("v=")[1].split("&")[0]
+    elif "youtu.be/" in query:
+        video_id = query.split("youtu.be/")[1].split("?")[0]
+
+    headers = {
+        "x-rapidapi-key": API_KEY,
+        "x-rapidapi-host": "youtube-mp36.p.rapidapi.com"
+    }
+
     try:
-        # Step 1: Search for the song to get Video ID
-        # Hum iTunes use karenge title nikalne ke liye (kabhi block nahi hota)
-        search_url = f"https://itunes.apple.com/search?term={query}&limit=1&entity=song"
-        search_res = requests.get(search_url, timeout=10).json()
-        
-        if search_res.get('resultCount', 0) > 0:
-            track = search_res['results'][0]
-            title = f"{track['trackName']} - {track['artistName']}"
-            
-            # Step 2: Full Song Link (Using a stable conversion proxy)
-            # Hum isay direct YouTube stream mein convert kar rahe hain
-            # Note: Preview link is stable, but for full song we use this:
-            full_song_link = track['previewUrl'].replace('preview.itunes.apple.com', 'audio-ssl.itunes.apple.com')
-            
+        # Requesting Full MP3 Link
+        response = requests.get(url, headers=headers, params={"id": video_id}, timeout=15)
+        data = response.json()
+
+        if data.get('status') == 'ok':
             return jsonify({
                 "status": "success",
-                "link": track['previewUrl'], # Stable link
-                "title": title,
-                "note": "Full version processing..."
+                "link": data.get('link'),
+                "title": data.get('title', 'Full Song Download')
             })
-        
-        return jsonify({"status": "error", "message": "Song not found"}), 404
+        else:
+            return jsonify({"status": "error", "message": "API Error: Please use a valid YouTube Link"}), 400
                 
     except Exception as e:
-        return jsonify({"status": "error", "message": "Server error, try again"}), 500
+        return jsonify({"status": "error", "message": "Server error. API Key might be inactive."}), 500
