@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import yt_dlp
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -13,28 +13,29 @@ def download():
         return jsonify({"status": "error", "message": "No query"}), 400
 
     try:
-        # YouTube search for full song
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'noplaylist': True,
-            'quiet': True,
-            'default_search': 'ytsearch1',
-            'nocheckcertificate': True,
-        }
+        # Step 1: Search for the video ID using an open API
+        search_url = f"https://vid.puffyan.us/api/v1/search?q={query}"
+        search_res = requests.get(search_url, timeout=15).json()
         
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Agar link hai ya naam, ye full video dhoondega
-            info = ydl.extract_info(query, download=False)
-            if 'entries' in info:
-                video = info['entries'][0]
-            else:
-                video = info
-                
-            return jsonify({
-                "status": "success",
-                "link": video['url'], # Full audio link
-                "title": video.get('title', 'Full Song')
-            })
+        if not search_res:
+            return jsonify({"status": "error", "message": "Song not found"}), 404
+            
+        video_id = search_res[0]['videoId']
+        title = search_res[0]['title']
+
+        # Step 2: Get the direct audio link (Full Song)
+        # Hum Invidious ki public API use kar rahe hain jo block nahi hoti
+        stream_url = f"https://vid.puffyan.us/api/v1/videos/{video_id}"
+        video_data = requests.get(stream_url, timeout=15).json()
+        
+        # Sab se behtareen audio format nikalna
+        audio_url = video_data['adaptiveFormats'][0]['url']
+
+        return jsonify({
+            "status": "success",
+            "link": audio_url,
+            "title": title
+        })
                 
     except Exception as e:
-        return jsonify({"status": "error", "message": "YouTube blocked this request. Try again in 1 min."}), 500
+        return jsonify({"status": "error", "message": "High Traffic. Please try again in a moment."}), 500
