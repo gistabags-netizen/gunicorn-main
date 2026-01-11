@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import yt_dlp
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -13,19 +13,20 @@ def download():
         return jsonify({"error": "No query provided"}), 400
 
     try:
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'noplaylist': True,
-            'quiet': True,
-            'default_search': 'ytsearch',
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(query, download=False)
-            video = info['entries'][0] if 'entries' in info else info
+        # Step 1: Search using Deezer API (Very stable for Spotify/Normal searches)
+        search_url = f"https://api.deezer.com/search?q={query}&limit=1"
+        response = requests.get(search_url)
+        data = response.json()
+
+        if data.get('data'):
+            track = data['data'][0]
             return jsonify({
                 "status": "success",
-                "link": video['url'],
-                "title": video.get('title', 'Song Found')
+                "link": track['preview'],  # Direct MP3 Link
+                "title": f"{track['title']} - {track['artist']['name']}"
             })
+        
+        return jsonify({"status": "error", "message": "Song not found"}), 404
+                
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
