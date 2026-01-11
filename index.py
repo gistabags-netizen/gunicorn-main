@@ -13,31 +13,19 @@ def download():
         return jsonify({"error": "No query provided"}), 400
 
     try:
-        # Spotify link ho ya song name, ye dhoond lega
         ydl_opts = {
             'format': 'bestaudio/best',
             'noplaylist': True,
             'quiet': True,
             'default_search': 'ytsearch',
-            'source_address': '0.0.0.0'
         }
-        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Agar Spotify playlist link hai toh ye uski search karega
             info = ydl.extract_info(query, download=False)
-            
-            if 'entries' in info:
-                # Playlist ki surat mein pehla gaana
-                video = info['entries'][0]
-            else:
-                # Single song ki surat mein
-                video = info
-                
+            video = info['entries'][0] if 'entries' in info else info
             return jsonify({
                 "status": "success",
                 "link": video['url'],
-                "title": video.get('title', 'Unknown Title')
+                "title": video.get('title', 'Song Found')
             })
-            
     except Exception as e:
-        return jsonify({"status": "error", "message": "Link processing error"}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
